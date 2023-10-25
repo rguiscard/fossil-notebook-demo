@@ -21,4 +21,16 @@ Download it from [github](https://github.com/rguiscard/fossil-notebook-demo/rele
 
 #### Login ####
 
-use demo:demo as user:password.
+use demo:demo as user:password. Not necessary for reading.
+
+#### Write notes ####
+
+Use `fossil open` to create a local copy of repository. Add notes in markdown format inside local repository. Use `fossil addremove` if new files are added. `fossil commit` to commit. 
+
+Read notes at `00-09.System/02.Documentation/` for more details.
+
+### How does it work ###
+
+Fossil supports [project documentation](https://www.fossil-scm.org/home/doc/trunk/www/embeddeddoc.wiki). It basically serves as a web server for static files. A web app can be created as project documentation and served by fossil. Fossil also support [JSON api](https://www.fossil-scm.org/home/doc/trunk/www/json-api/index.md) to read files inside repository. Therefore, this web app can access content in the fossil repository. The drawback is that web app cannot create files inside repository. But fossil also support wiki which is readable and wriable through its JSON api.
+
+In some sense, this can be seen as a highly [customized skin](https://www.fossil-scm.org/home/doc/trunk/www/customskin.md) of Fossil SCM.
