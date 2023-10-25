@@ -13,7 +13,7 @@ Download it from [github](https://github.com/rguiscard/fossil-notebook-demo/rele
 
 #### Installation ####
 
-[Install fossil](https://fossil-scm.org/home/doc/trunk/www/build.wiki), better to have tcl support just in case.
+[Install fossil](https://fossil-scm.org/home/doc/trunk/www/build.wiki)
 
 #### Run ####
 
