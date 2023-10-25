@@ -1,0 +1,6 @@
+<div id='notebook-baseurl'>
+  <th1>puts $baseurl</th1>
+</div>
+<div id='notebook-home'>
+  <th1>puts $home</th1>
+</div>
