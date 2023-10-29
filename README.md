@@ -13,7 +13,7 @@ Download it from [github](https://github.com/rguiscard/fossil-notebook-demo/rele
 
 #### Installation ####
 
-[Install fossil](https://fossil-scm.org/home/doc/trunk/www/build.wiki), better to compile with `--with-th1-docs`.
+[Install fossil](https://fossil-scm.org/home/doc/trunk/www/build.wiki): compile with `--enable-json` (mandatory) and `--with-th1-docs` (recommended).
 
 #### Run ####
 
