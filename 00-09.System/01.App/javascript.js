@@ -2,6 +2,7 @@ import { TodoTxt } from "./vendor/todotxt.js"
 
 const app = document.getElementById("app");
 var notebookPrefix = null
+var notebookDocHome = null
 
 const extractMetadataFromMarkdown = (markdown) => {
   const charactersBetweenGroupedHyphens = /^---([\s\S]*?)---/;
@@ -46,6 +47,34 @@ function prefixPath(path, func) {
   } else {
     func(notebookPrefix+path)
   }
+}
+
+// document home /doc/trunk, /doc/ckout, etc.
+function documentHome() {
+  if (notebookDocHome == null) {
+    m.request({
+      method: "GET",
+      url: "config.th1",
+      responseType: "document",
+      deserialize: function(value) { return value },
+    })
+    .then(function(config) {
+      var x = config.getElementById('notebook-current').textContent.trim().split('/')
+      if (x.length > 2) {
+        notebookDocHome = m.buildPathname("/doc/:version", {version: x[1]})
+      }
+    })
+    .catch(function(e) {
+      // Cannot get config. Use default
+      console.log(e)
+    })
+  }
+
+  if (notebookDocHome == null) {
+    notebookDocHome = "/doc/trunk"
+  }
+
+  return notebookDocHome
 }
 
 // *** User ***
@@ -108,7 +137,7 @@ var File = {
 
   // file 'id' is path
   current: {},
-  loadUUID: function(uuid) {
+  loadUUID: function(uuid, name) {
     // Clean previous one first
     File.current = {meta: null, content: null}
     prefixPath("/json/artifact/:uuid", function(path) {
@@ -119,6 +148,7 @@ var File = {
       })
       .then(function(result) {
         File.current = result.payload
+        File.current["name"] = name
       })
     })
   },
@@ -134,11 +164,11 @@ var File = {
       })
       .then(function(result) {
         var payload = result.payload
-        console.log(payload)
+        console.log("File.load", payload)
         if (payload && payload.checkins && (payload.checkins.length > 0)) {
+          // this may not be the latest checkins if file name changed.
           var uuid = payload.checkins.slice(-1)[0].uuid
-          console.log("File.load", result.payload, uuid)
-          File.loadUUID(uuid)
+          File.loadUUID(uuid, result.payload.name) // name is full path to file with initial slash
         }
       })
     })
@@ -219,23 +249,37 @@ var FileView = {
   oninit: function(vnode) { File.load(vnode.attrs.key) },
   view: function() {
     var title
-    var file_ext
+    var file_ext = null
+    var file_type = null
     var content
 
-    if (File.current && File.current.checkins && (File.current.checkins.length > 0)) {
-      title = File.current.checkins.slice(-1)[0].name
-      file_ext = title.split('.').pop()
+//    if (File.current && File.current.checkins && (File.current.checkins.length > 0)) {
+    if (File.current && File.current.name) {
+      title = File.current.name
+      var x = title.split('.')
+      if (x.length > 1) {
+        file_ext = x.pop()
+      } 
+      if (x.length > 1){
+        file_type = x.pop()
+      }
     }
     if (File.current.content) {
-      if (["js", "css", "html"].includes(file_ext)) {
+      if ((file_type == "app") && (file_ext == "html")) {
+        var path = m.buildPathname(":doc/:file", {doc: documentHome(), file: File.current.name})
+        console.log(File.current, decodeURIComponent(path))
+        window.location.replace(decodeURIComponent(path))
+      }
+      else if (["js", "css", "html", "txt", "text"].includes(file_ext)) {
         return m(PlainTextView, {title: title, content: File.current.content})
       } else {
         // ContentView will render differently based on format field in front matter
         return m(ContentView, {title: title, content: File.current.content})
       }
     } else if (File.current.contentType && (File.current.contentType == "unknown/unknown")) {
-      var checkin = File.current.checkins.slice(-1)[0]
-      return m(BinaryView, {title: checkin.name, href: m.buildPathname(notebookPrefix+"/file", {name: checkin.name})})
+//      var checkin = File.current.checkins.slice(-1)[0]
+//      return m(BinaryView, {title: checkin.name, href: m.buildPathname(notebookPrefix+"/file", {name: checkin.name})})
+      return m(BinaryView, {title: File.current.name, href: m.buildPathname(notebookPrefix+"/file", {name: File.current.name})})
     }
   }
 }
@@ -250,21 +294,50 @@ function ContentView(vnode) {
     view: function() {
       if (content) {
         var x = extractMetadataFromMarkdown(content)
+        var display_meta = ""
+        var header = m("h3", title)
 
         if (x.meta) {
           if (x.meta.title) {
             title = x.meta.title
           }
 
+          display_meta = Object.keys(x.meta).map(function(key) {
+            return m("span", [
+              m("b", key),
+              m("span", ": "),
+              m("span", x.meta[key]), 
+              m("br"),
+            ])
+          })
+
+          var header = m("div.accordion", [
+            m("input", {type: "checkbox", id: "meta", name: "accordion-checkbox", hidden: "true"}),
+            m("label.accordion-header.float-right", {for: "meta", style: "padding-top: 0; padding-bottom: 0"}, [
+              "meta",
+              m("i.icon.icon-arrow-right.ml-1"),
+            ]),
+            m("h3", title),
+            m("div.accordion-body", {style: "padding-left: 1em; margin-bottom: 0"},
+              display_meta
+            ), 
+          ])
+ 
           if (x.meta.format) {
             var format = x.meta.format
             if (["todotxt", "todo.txt", "todo"].includes(format.toLowerCase())) {
-              return m(TodoTxtView, {title: title, meta: x.meta, content: x.content})
+              return m("div", [
+                header,
+                m(TodoTxtView, {content: x.content})
+              ])
             }
           }
         }
 
-        return m(MarkdownView, {title: title, meta: x.meta, content: x.content})
+        return m("div", [
+          header,
+          m(MarkdownView, {content: x.content})
+        ])
       }
     }
   }
@@ -297,8 +370,6 @@ function PlainTextView(vnode) {
 }
 
 function MarkdownView(vnode) {
-  var title = vnode.attrs.title
-  var meta = vnode.attrs.meta
   var content = vnode.attrs.content
 
   return {
@@ -307,11 +378,7 @@ function MarkdownView(vnode) {
       if (content) {
         var markdownContent = m.trust(DOMPurify.sanitize(marked.parse(content)))
       
-        return m("div", {}, [
-          m("h3", title),
-          meta ? m("pre.code", JSON.stringify(meta)) : "", 
-          m("div", markdownContent),
-        ])
+        return m("div", markdownContent)
       }
     }
   }
@@ -333,9 +400,19 @@ function BinaryView(vnode) {
 }
 
 function TodoTxtView(vnode) {
-  var title = vnode.attrs.title
-  var meta = vnode.attrs.meta
   var content = vnode.attrs.content
+
+  var tags = [true, false, false]
+
+  var filterChanged = function(e) {
+    if (e.target.id == "tag-1") {
+      tags = [false, true, false]
+    } else if (e.target.id == "tag-2") {
+      tags = [false, false, true]
+    } else {
+      tags = [true, false, false]
+    }
+  }
 
   return {
     oninit: function(vnode) { },
@@ -343,9 +420,20 @@ function TodoTxtView(vnode) {
       if (content) {
         var todos = TodoTxt.parseFile(content).items()
   
-        return m("div", {}, [
-          m("h3", title),
-          meta ? m("pre.code", JSON.stringify(meta)) : "", 
+        return m("div.filter", {}, [
+          m("input.filter-tag", 
+            {type: "radio", id: "tag-0", name: "filter-radio", hidden: true, onchange: filterChanged, checked: tags[0]}),
+          m("input.filter-tag", 
+            {type: "radio", id: "tag-1", name: "filter-radio", hidden: true, onchange: filterChanged, checked: tags[1]}),
+          m("input.filter-tag", 
+            {type: "radio", id: "tag-2", name: "filter-radio", hidden: true, onchange: filterChanged, checked: tags[2]}),
+
+          m("div.filter-nav", [
+            m("label.chip", {for: "tag-0"}, "All"),
+            m("label.chip", {for: "tag-1"}, "Checked"),
+            m("label.chip", {for: "tag-2"}, "Unchecked"),
+          ]),
+
           m("table.table.table-striped.table-hover", [
             m("thead", [
               m("tr", [
@@ -354,8 +442,15 @@ function TodoTxtView(vnode) {
                 m("th", "Due at"),
               ])
             ]),
-            m("tbody", todos.map(function(todo) {
-                return m("tr", [
+            m("tbody", todos.filter(function(todo) {
+                if (tags[1] == true) {
+                  return todo.isComplete()
+                } else if (tags[2] == true) {
+                  return !todo.isComplete()
+                }
+                return true
+            }).map(function(todo) {
+                return m("tr", { }, [
                   m("td.text-right", todo.isComplete() ? '\u2713' : ""),
                   m("td", todo.textTokens().join(" ")),
                   m("td", todo.addons()["due"] || ""),
@@ -775,6 +870,18 @@ function NoteList(vnode) {
 function Todos(vnode) {
   var notes = []
 
+  var tags = [true, false, false]
+
+  var filterChanged = function(e) {
+    if (e.target.id == "tag-1") {
+      tags = [false, true, false]
+    } else if (e.target.id == "tag-2") {
+      tags = [false, false, true]
+    } else {
+      tags = [true, false, false]
+    }
+  }
+
   return {
     oninit: function() { Note.loadFileData("/"); Note.loadWikiData(); },
     view: function() {
@@ -814,8 +921,23 @@ function Todos(vnode) {
         })
       })
 
+
       return m("div", [
         m("h3", "Todos"),
+        m("div.filter", {}, [
+          m("input.filter-tag", 
+            {type: "radio", id: "tag-0", name: "filter-radio", hidden: true, onchange: filterChanged, checked: tags[0]}),
+          m("input.filter-tag", 
+            {type: "radio", id: "tag-1", name: "filter-radio", hidden: true, onchange: filterChanged, checked: tags[1]}),
+          m("input.filter-tag", 
+            {type: "radio", id: "tag-2", name: "filter-radio", hidden: true, onchange: filterChanged, checked: tags[2]}),
+
+          m("div.filter-nav", [
+            m("label.chip", {for: "tag-0"}, "All"),
+            m("label.chip", {for: "tag-1"}, "Checked"),
+            m("label.chip", {for: "tag-2"}, "Unchecked"),
+          ]),
+        ]),
         m("table.table.table-striped.table-hover", [
           m("thead", 
             m("tr", [
@@ -825,7 +947,14 @@ function Todos(vnode) {
               m("th", "Due date"),
             ])
           ),
-          m("tbody", notes.map(function(note) {
+          m("tbody", notes.filter(function(note) {
+              if (tags[1] == true) {
+                return note.completed
+              } else if (tags[2] == true) {
+                return !note.completed
+              }
+              return true
+            }).map(function(note) {
             return m("tr", [
               m("td.text-right", note.completed ? '\u2713' : ""),
               m("td", 
@@ -915,13 +1044,43 @@ var Layout = {
     return m("div", [
       m("header.navbar", [
         m("section.navbar-section", [
-          m(m.route.Link, {href: "/list", class: "navbar-brand mr-2"}, "Fossil Notes"),
-          m(m.route.Link, {href: "/new", class: "btn btn-link"}, "New"),
-          m(m.route.Link, {href: "/files", class: "btn btn-link"}, "Files"),
-          m(m.route.Link, {href: "/wiki", class: "btn btn-link"}, "Wiki"),
-          m(m.route.Link, {href: "/todos", class: "btn btn-link"}, "Todos"),
-          m(m.route.Link, {href: "/bookmarks", class: "btn btn-link"}, "Bookmarks"),
-          (User.name == "nobody") ? "" : m("a", { href: "/setup" }, "Admin"),
+          m("div.dropdown.show-md", [
+            m("span.btn.btn-link.dropdown-toggle", { href:"#", tabindex: "0" }, [
+              m("i.icon.icon-menu"),
+            ]),
+            m("ul.menu", [
+              m("li.menu-item", 
+                m(m.route.Link, {href: "/list"}, "Fossil Notes")
+              ),
+              m("li.divider"),
+              m("li.menu-item", 
+                m(m.route.Link, {href: "/new"}, "New")
+              ),
+              m("li.menu-item", 
+                m(m.route.Link, {href: "/files"}, "Files")
+              ),
+              m("li.menu-item", 
+                m(m.route.Link, {href: "/wiki"}, "Wiki")
+              ),
+              m("li.menu-item", 
+                m(m.route.Link, {href: "/todos"}, "Todos")
+              ),
+              m("li.menu-item", 
+                m(m.route.Link, {href: "/bookmarks"}, "Bookmarks")
+              ),
+              m("li.divider"),
+              m("li.menu-item", 
+                (User.name == "nobody") ? "" : m("a", { href: "/setup" }, "Admin")
+              ),
+            ])
+          ]),
+          m(m.route.Link, {href: "/list", class: "navbar-brand mr-2"}, "Fossil\u00A0Notes"),
+          m(m.route.Link, {href: "/new", class: "btn btn-link hide-md"}, "New"),
+          m(m.route.Link, {href: "/files", class: "btn btn-link hide-md"}, "Files"),
+          m(m.route.Link, {href: "/wiki", class: "btn btn-link hide-md"}, "Wiki"),
+          m(m.route.Link, {href: "/todos", class: "btn btn-link hide-md"}, "Todos"),
+          m(m.route.Link, {href: "/bookmarks", class: "btn btn-link hide-md"}, "Bookmarks"),
+          (User.name == "nobody") ? "" : m("a", { href: "/setup", class: "btn btn-link hide-md" }, "Admin"),
         ]),
         m("section.navbar-section", [
           m("span", User.display()),
@@ -932,9 +1091,6 @@ var Layout = {
     ])
   }
 }
-
-// Mount
-//m.mount(app, NoteList)
 
 m.route(app, "/list", {
   "/list": {
