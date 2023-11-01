@@ -9,13 +9,13 @@ This is a note-keeping web app on top of Fossil SCM. It combines several tools a
 
 #### Download ####
 
-Download it from [github](https://github.com/rguiscard/fossil-notebook-demo/releases/tag/demo)
+Download repository `notebook-demo.fossil` from [github](https://github.com/rguiscard/fossil-notebook-demo/releases/tag/demo)
 
 #### Installation ####
 
-[Install fossil](https://fossil-scm.org/home/doc/trunk/www/build.wiki). 
+[Install fossil](https://fossil-scm.org/home/doc/trunk/www/build.wiki)
 
-JSON API support is necessary. Some binary packages have JSON API built-in. To check, start the fossil server with this demo repository or any other fossil repositories, and connect to \<fossil server ip\>:8080/json/stat with browser, you should see some information, or [compile with --enable-json](https://fossil-scm.org/home/doc/trunk/www/json-api/intro.md#builing).
+JSON API support is necessary. Some binary packages have JSON API built-in. To check, start the fossil server with this demo repository or any other fossil repository, and connect to \<fossil server ip\>:8080/json/stat with browser. You should see some information if JSON api works. Or [compile with --enable-json](https://fossil-scm.org/home/doc/trunk/www/json-api/intro.md#builing).
 
 It is also better to compile with `--with-th1-docs` just in case, especially for multiple repositories support (see below).
 
@@ -39,9 +39,11 @@ Fossil supports [project documentation](https://www.fossil-scm.org/home/doc/trun
 
 In some sense, this can be seen as a highly [customized skin](https://www.fossil-scm.org/home/doc/trunk/www/customskin.md) of Fossil SCM.
 
+![workflow](fossil-notebook-demo.png)
+
 #### Multiple Repositories ####
 
-Fossil SCM supports [serving multiple repositories](https://fossil-scm.org/home/help?cmd=server) through the same ip address with `--repolist`. For example, if there are _work.fossil_ and _budget.fossil_ under directory _/home/user/repositories_, start `fossil server --repolist /home/user/repositories` allows browser connecting to \<fossil server ip\>:8080/work to `work.fossil`, and \<fossil server ip\>:8080/budget to `budget.fossil`. It makes divide notes into different repositories easier. But to make web app work in this way, **th1** support is necessary. So remember to compile Fossil with `--wit-th1-docs`.
+Fossil SCM supports [serving multiple repositories](https://fossil-scm.org/home/help?cmd=server) through the same ip address with `--repolist`. For example, if there are _work.fossil_ and _budget.fossil_ under directory _/home/user/repositories_, starting `fossil server --repolist /home/user/repositories` allows browser connecting to \<fossil server ip\>:8080/work to `work.fossil`, and \<fossil server ip\>:8080/budget to `budget.fossil`. It makes separating notes into different repositories easier. But to make web app work in this way, **th1** support is necessary. So remember to compile Fossil with `--with-th1-docs`. Otherwise, web app do not know the base url.
 
 ### Future Plan ###
 
