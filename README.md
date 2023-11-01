@@ -35,7 +35,7 @@ Read notes at `00-09.System/02.Documentation/` for more details.
 
 ### How does it work ###
 
-Fossil supports [project documentation](https://www.fossil-scm.org/home/doc/trunk/www/embeddeddoc.wiki). It basically serves as a web server for static files. A web app can be created as project documentation and served by fossil. Fossil also support [JSON api](https://www.fossil-scm.org/home/doc/trunk/www/json-api/index.md) to read files inside repository. Therefore, this web app can access content in the fossil repository. The drawback is that web app cannot create files inside repository. But fossil also support wiki which is readable and wriable through its JSON api.
+Fossil supports [project documentation](https://www.fossil-scm.org/home/doc/trunk/www/embeddeddoc.wiki). It basically serves as a web server for static files. A web app can be created as project documentation and served by fossil. Fossil also support [JSON api](https://www.fossil-scm.org/home/doc/trunk/www/json-api/index.md) to read files inside repository. Therefore, this web app can access content in the fossil repository. The drawback is that web app cannot create files inside repository. But fossil also support wiki which is readable and writable through its JSON api.
 
 In some sense, this can be seen as a highly [customized skin](https://www.fossil-scm.org/home/doc/trunk/www/customskin.md) of Fossil SCM.
 
@@ -52,3 +52,7 @@ This way of keeping notes is very opinioned. Different people will have differen
 #### Extension / Plug-in ####
 
 If you want to add more web app, a work is in progress that any html file ended with `.app.html` will be open straight instead of displayed as text file. In such case, you can have your own web app opened easier from the main web app. But again, this web app is quite opinioned. You probably should consider to fork it.
+
+### Development ###
+
+Please note that you can use /doc/**ckout** instead of /doc/**trunk** during development. It will serves files in local copy instead of repository. Therefore, you do not need to keep committing changes into repositories. It is mentioned in [Project Documentation](https://www.fossil-scm.org/home/doc/trunk/www/embeddeddoc.wiki) of Fossil SCM.
